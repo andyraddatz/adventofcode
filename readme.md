@@ -1,1 +1,1 @@
-# repo for my advent of code solutions
+# Andy's [advent of code](https://adventofcode.com) solutions
