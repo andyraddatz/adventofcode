@@ -28,7 +28,6 @@ public static class Day1
 
         return ret;
     }
-
     public static int Part2()
     {
         var input = File.ReadAllLines("data/day1.txt");
@@ -52,7 +51,6 @@ public static class Day1
                 }
         return ret;
     }
-
     static readonly string[] _spelledOutDigits = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
     private static char? FindStringDigitAfter(string line, int j)
     {
