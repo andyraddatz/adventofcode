@@ -42,8 +42,7 @@ public static class Day4
 
     public static int Part2()
     {
-        // todo: tally total cards after 
-        // var totalCardTally = 0;
+        // tally total cards after 
         // copying N subsequent cards where N is the number of winning numbers on a given card
         // so if card 1 wins twice, add copies of 2 and 3
         // if card 2 wins 3 times, add copies of 3, 4, and 5 for the original 
@@ -56,7 +55,7 @@ public static class Day4
             // no format validations because i can see all the data
             var cardId = int.Parse(line[..line.IndexOf(':')].Split(' ').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()[1]);
 
-            // init with 1 card or add to stack
+            // init with 1 original card or add to stack after previous copies
             if (cardStacks.TryGetValue(cardId, out _))
                 cardStacks[cardId]++;
             else
