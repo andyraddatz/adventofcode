@@ -8,13 +8,14 @@ _totalStopWatch.Start();
 var _stopWatch = new Stopwatch();
 _stopWatch.Start();
 
-DisplayResults("Day1.Part1", Day1.Part1(), proc, _stopWatch);
-DisplayResults("Day1.Part2", Day1.Part2(), proc, _stopWatch);
-DisplayResults("Day2.Part1", Day2.Part1(), proc, _stopWatch);
-DisplayResults("Day2.Part2", Day2.Part2(), proc, _stopWatch);
-DisplayResults("Day3.Part1", Day3.Part1(), proc, _stopWatch);
-DisplayResults("Day3.Part2", Day3.Part2(), proc, _stopWatch);
-DisplayResults("Day4.Part1", Day4.Part1(), proc, _stopWatch);
+DisplayResults("Day1 Part1", Day1.Part1(), proc, _stopWatch);
+DisplayResults("     Part2", Day1.Part2(), proc, _stopWatch);
+DisplayResults("Day2 Part1", Day2.Part1(), proc, _stopWatch);
+DisplayResults("     Part2", Day2.Part2(), proc, _stopWatch);
+DisplayResults("Day3 Part1", Day3.Part1(), proc, _stopWatch);
+DisplayResults("     Part2", Day3.Part2(), proc, _stopWatch);
+DisplayResults("Day4 Part1", Day4.Part1(), proc, _stopWatch);
+DisplayResults("     Part2", Day4.Part2(), proc, _stopWatch);
 
 _stopWatch.Stop();
 _totalStopWatch.Stop();
