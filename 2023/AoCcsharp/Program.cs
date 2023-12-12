@@ -21,6 +21,7 @@ DisplayResults("Day5 Part1", Day5.Part1(), proc, _stopWatch);
 // DisplayResults("     Part2", Day5.Part2Attempt2(), proc, _stopWatch);
 // DisplayResults("     Part2", Day5.Part2Example(), proc, _stopWatch);
 DisplayResults("     Part2", Day5.Part2Attempt3(), proc, _stopWatch);
+// DisplayResults("     Part2", Day5.Part2Attempt4(), proc, _stopWatch);
 
 _stopWatch.Stop();
 _totalStopWatch.Stop();

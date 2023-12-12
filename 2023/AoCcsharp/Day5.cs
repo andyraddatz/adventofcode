@@ -10,16 +10,7 @@ public static class Day5
     static readonly string[] _input = File.ReadAllLines("data/day5.txt");
     static readonly long[] _seeds;
     static readonly Tuple<long, long>[] _seedRanges;
-    static readonly Dictionary<MappingType, Tuple<long, long, long>[]> _maps = new()
-    {
-        [MappingType.SeedToSoil] = [],
-        [MappingType.SoilToFertilizer] = [],
-        [MappingType.FertilizerToWater] = [],
-        [MappingType.WaterToLight] = [],
-        [MappingType.LightToTemperature] = [],
-        [MappingType.TemperatureToHumidity] = [],
-        [MappingType.HumidityToLocation] = []
-    };
+    static readonly Dictionary<MappingType, Tuple<long, long, long>[]> _maps;
     static readonly Tuple<long, long, long>[]
         _seedToSoil = [],
         _soilToFertilizer = [],
@@ -76,6 +67,17 @@ public static class Day5
                 .. _humidityToLocation,
                 GetTupleForIndex(i)
             ];
+
+        _maps = new()
+        {
+            [MappingType.SeedToSoil] = _seedToSoil,
+            [MappingType.SoilToFertilizer] = _soilToFertilizer,
+            [MappingType.FertilizerToWater] = _fertilizerToWater,
+            [MappingType.WaterToLight] = _waterToLight,
+            [MappingType.LightToTemperature] = _lightToTemperature,
+            [MappingType.TemperatureToHumidity] = _temperatureToHumidity,
+            [MappingType.HumidityToLocation] = _humidityToLocation
+        };
     }
 
     private static Tuple<long, long, long> GetTupleForIndex(int i) => new(
@@ -103,33 +105,17 @@ public static class Day5
 
         return lowestLocationNumber;
     }
-    private static long ConvertAttempt2(long input, Tuple<long, long, long>[] maps, bool reverse = false)
-    {
-        // need to write a fast seed-to-location converter
-        return SeedToLocation(input);
-        return default;
-    }
 
     private static long SeedToLocation(long seed)
     {
-        for (int i = 0; i < _seedToSoil.Length; i++)
-        {
-            var mapping = _seedToSoil[i];
-            var srcStart = mapping.Item2;
-            var destStart = mapping.Item1;
-            var rngLength = mapping.Item3;
-
-            var srcEnd = srcStart + rngLength - 1;
-            var destEnd = destStart + rngLength - 1;
-
-            if (seed >= srcStart && seed <= srcEnd)
-                return destStart + (seed - srcStart);
-        }
-        return seed;
-
-        // throw new NotImplementedException();
+        var soil = Convert(seed, _seedToSoil);
+        var fertilizer = Convert(soil, _soilToFertilizer);
+        var water = Convert(fertilizer, _fertilizerToWater);
+        var light = Convert(water, _waterToLight);
+        var temp = Convert(light, _lightToTemperature);
+        var humidity = Convert(temp, _temperatureToHumidity);
+        return Convert(humidity, _humidityToLocation);
     }
-
     private static long Convert(long input, Tuple<long, long, long>[] map, bool reverse = false)
     {
         if (reverse)
@@ -201,6 +187,57 @@ public static class Day5
         return input;
     }
 
+    public static long Part2Attempt4()
+    {
+        // figure out SeedToLocation, then use LocationToSeed from 0 to long.MaxValue
+        // WAIT! you only need to start at seedRanges.Min() 
+        // and end at humidityToLocation.Min()
+        // then start checking backwards from location ranges
+        // or forward if dropping out of 
+        // to find lowest location that corresponds to a seed
+        var minSeed = _seedRanges.Min(sr => sr.Item1);
+        var minLocation = long.MaxValue;
+        for (long i = minSeed; i < long.MaxValue; i++)
+        {
+            var location = SeedToLocation(i);
+            if (location < minLocation)
+            {
+                Debug.WriteLine($"Seed: {i} Location: {location}");
+                minLocation = location;
+            }
+        }
+
+        // lol copilot suggested: this is still not efficient enough
+        // lol copilot suggested: "lol copilot suggested: use a binary search" - getting spicy
+        return 0;
+    }
+    public static long VerifyExclusiveRanges()
+    {
+        // first let's see if these mappings are exclusive
+        foreach (var map in _maps.Select(m => m.Value))
+            for (int i = 0; i < map.Length; i++)
+            {
+                var mapping = map[i];
+                var srcStart = mapping.Item2;
+                var rngLength = mapping.Item3;
+
+                var srcEnd = srcStart + rngLength - 1;
+
+                for (int j = i + 1; j < map.Length; j++)
+                {
+                    var mapping2 = map[j];
+                    var srcStart2 = mapping2.Item2;
+                    var rngLength2 = mapping2.Item3;
+
+                    var srcEnd2 = srcStart2 + rngLength2 - 1;
+
+                    if (srcStart2 >= srcStart && srcStart2 <= srcEnd || srcEnd2 >= srcStart && srcEnd2 <= srcEnd)
+                        throw new Exception("Overlapping mappings");
+                }
+            }
+
+        return 0;
+    }
     public static long Part2Attempt3()
     {
         long lowestLocationNumber = long.MaxValue;
@@ -209,18 +246,25 @@ public static class Day5
         // _ = Parallel.ForEach(seedRanges, sr =>
         Debug.WriteLine("Converting seed to soil");
         var soilRanges = _seedRanges.Distinct().SelectMany(sr => Convert(sr, _seedToSoil)).ToList();
+        soilRanges = soilRanges.Shrink();
         Debug.WriteLine("Converting soil to fertilizer");
         var fertilizerRanges = soilRanges.Distinct().SelectMany(soil => Convert(soil, _soilToFertilizer)).ToList();
+        fertilizerRanges = fertilizerRanges.Shrink();
         Debug.WriteLine("Converting fertilizer to water");
         var waterRanges = fertilizerRanges.Distinct().SelectMany(fertilizer => Convert(fertilizer, _fertilizerToWater)).ToList();
+        waterRanges = waterRanges.Shrink();
         Debug.WriteLine("Converting water to light");
         var lightRanges = waterRanges.Distinct().SelectMany(water => Convert(water, _waterToLight)).ToList();
+        lightRanges = lightRanges.Shrink();
         Debug.WriteLine("Converting light to temperature");
         var tempRanges = lightRanges.Distinct().SelectMany(light => Convert(light, _lightToTemperature)).ToList();
+        tempRanges = tempRanges.Shrink();
         Debug.WriteLine("Converting temperature to humidity");
         var humidityRanges = tempRanges.Distinct().SelectMany(temp => Convert(temp, _temperatureToHumidity)).ToList();
+        humidityRanges = humidityRanges.Shrink();
         Debug.WriteLine("Converting humidity to location");
         var locationNumberRanges = humidityRanges.Distinct().SelectMany(humidity => Convert(humidity, _humidityToLocation)).ToList();
+        locationNumberRanges = locationNumberRanges.Shrink();
         var lowestLocationNumberInRange = locationNumberRanges.Min(lnr => lnr.Item1);
 
         var lowestRange = locationNumberRanges.OrderBy(lnr => lnr.Item1).First();
@@ -255,7 +299,7 @@ public static class Day5
                         if (i < lowestLocationNumber)
                         {
                             lowestLocationNumber = i;
-                            loopState.Break();
+                            Debug.WriteLine($"New lowest location number: {lowestLocationNumber}");
                         }
                 }
         }
@@ -535,7 +579,8 @@ public static class Day5
             var destEnd = destStart + rngLength - 1;
 
             if (inputStart > srcEnd || inputEnd < srcStart)
-            { }
+            {
+            }
             else if (inputStart < srcStart && inputEnd >= srcStart && inputEnd <= srcEnd)
             {
             }
