@@ -8,6 +8,7 @@ namespace AoCcsharp;
 
 public static class Day5
 {
+    // private static bool _showConversions = false;
 
     static readonly string[] _input = File.ReadAllLines("data/day5.txt");
     static readonly long[] _seeds;
@@ -121,10 +122,10 @@ public static class Day5
 
         return lowestLocationNumber;
     }
-    private static long Convert(long input, Mapping[] map, bool reverse = false)
+    private static long Convert(long input, Mapping[] map, bool reverse = false, bool showConversions = false)
     {
         if (reverse)
-            return ConvertReverse(input, map);
+            return ConvertReverse(input, map, showConversions);
 
         foreach (var mapping in map)
         {
@@ -138,7 +139,9 @@ public static class Day5
             // if input is in the source range
             if (input >= srcStart && input < srcEnd)
             {
-                Debug.WriteLine(@$"
+                if (showConversions)
+                {
+                    Debug.WriteLine(@$"
                     srcStart:   {srcStart,10}
                     input:      {input,10}
                     srcEnd:     {srcEnd,10}
@@ -147,6 +150,7 @@ public static class Day5
                     advance:    {input - srcStart,10}
                     dest:       {destStart + (input - srcStart),10}
                     ");
+                }
 
                 // return the destination range start 
                 // + the difference between the input and the source start
@@ -157,7 +161,7 @@ public static class Day5
         // if no mapping return same input
         return input;
     }
-    private static long ConvertReverse(long input, Mapping[] map)
+    private static long ConvertReverse(long input, Mapping[] map, bool showConversions = false)
     {
         // copilot wrote this entire function with one TAB key press
         foreach (var mapping in map)
@@ -172,7 +176,9 @@ public static class Day5
             // if input is in the source range
             if (input >= destStart && input < destStart + rngLength)
             {
-                Debug.WriteLine(@$"
+                if (showConversions)
+                {
+                    Debug.WriteLine(@$"
                     destStart:  {destStart,10}
                     input:      {input,10}
                     srcStart:   {srcStart,10}
@@ -181,6 +187,7 @@ public static class Day5
                     advance:    {input - destStart,10}
                     src:        {srcStart + (input - destStart),10}
                     ");
+                }
 
                 // return the destination range start 
                 // + the difference between the input and the source start
@@ -193,64 +200,110 @@ public static class Day5
     }
     public static long Part2Attempt3()
     {
+        // TODO: recursion
         // SetExampleValues();
         long lowestLocationNumber = long.MaxValue;
         int pathsCompleted = 0;
         Tuple<long, long>? lowestLocationRange = default;
         object lockObj = new();
-        // _ = Parallel.ForEach(seedRanges, sr =>
-        Parallel.For(0, _seedRanges.Length, i =>
+        // Parallel.For(0, _seedRanges.Length, i =>
+        for (int i = 0; i < _seedRanges.Length; i++)
         {
-            // var soilRanges = Convert(_seedRanges[0], _seedToSoil).Distinct().ToArray();
-            var soilRanges = Convert(_seedRanges[i], _seedToSoil).Distinct().ToArray();
-            Parallel.For(0, soilRanges.Length, j =>
+            Debug.WriteLine($"i:{i,2}");
+            var soilRanges = Convert(_seedRanges[i], _seedToSoil, true).Distinct().ToArray();
+            // Debug.WriteLine($"i:{i,2}{Environment.NewLine}{string.Join(Environment.NewLine, soilRanges.Select(sr => $"{sr.Item1,10} - {sr.Item2,10}"))}");
+            // Parallel.For(0, soilRanges.Length, j =>
+            for (int j = 0; j < soilRanges.Length; j++)
             {
-                // var fertilizerRanges = Convert(soilRanges[0], _soilToFertilizer).Distinct().ToArray();
-                var fertilizerRanges = Convert(soilRanges[j], _soilToFertilizer).Distinct().ToArray();
-                Parallel.For(0, fertilizerRanges.Length, k =>
+                Debug.WriteLine($"i:{i,2} j:{j,2}");
+
+                var fertilizerRanges = Convert(soilRanges[j], _soilToFertilizer, true).Distinct().ToArray();
+                // Parallel.For(0, fertilizerRanges.Length, k =>
+                for (int k = 0; k < fertilizerRanges.Length; k++)
                 {
-                    // var waterRanges = Convert(fertilizerRanges[0], _fertilizerToWater).Distinct().ToArray();
-                    var waterRanges = Convert(fertilizerRanges[k], _fertilizerToWater).Distinct().ToArray();
-                    Parallel.For(0, waterRanges.Length, l =>
+                    Debug.WriteLine($"i:{i,2} j:{j,2} k:{k,2}");
+                    var waterRanges = Convert(fertilizerRanges[k], _fertilizerToWater, true).Distinct().ToArray();
+                    // Parallel.For(0, waterRanges.Length, l =>
+                    for (int l = 0; l < waterRanges.Length; l++)
                     {
-                        // var lightRanges = Convert(waterRanges[0], _waterToLight).Distinct().ToArray();
-                        var lightRanges = Convert(waterRanges[l], _waterToLight).Distinct().ToArray();
-                        Parallel.For(0, lightRanges.Length, m =>
+                        Debug.WriteLine($"i:{i,2} j:{j,2} k:{k,2} l:{l,2}");
+                        var lightRanges = Convert(waterRanges[l], _waterToLight, true).Distinct().ToArray();
+                        // Parallel.For(0, lightRanges.Length, m =>
+                        for (int m = 0; m < lightRanges.Length; m++)
                         {
-                            // var tempRanges = Convert(lightRanges[0], _lightToTemperature).Distinct().ToArray();
-                            var tempRanges = Convert(lightRanges[m], _lightToTemperature).Distinct().ToArray();
-                            Parallel.For(0, tempRanges.Length, n =>
+                            Debug.WriteLine($"i:{i,2} j:{j,2} k:{k,2} l:{l,2} m:{m,2}");
+                            var tempRanges = Convert(lightRanges[m], _lightToTemperature, true).Distinct().ToArray();
+                            // Parallel.For(0, tempRanges.Length, n =>
+                            for (int n = 0; n < tempRanges.Length; n++)
                             {
-                                // var humidityRanges = Convert(tempRanges[0], _temperatureToHumidity).Distinct().ToArray();
-                                var humidityRanges = Convert(tempRanges[n], _temperatureToHumidity).Distinct().ToArray();
-                                Parallel.For(0, humidityRanges.Length, o =>
+                                Debug.WriteLine($"i:{i,2} j:{j,2} k:{k,2} l:{l,2} m:{m,2} n:{n,2}");
+                                var humidityRanges = Convert(tempRanges[n], _temperatureToHumidity, true).Distinct().ToArray();
+                                // Parallel.For(0, humidityRanges.Length, o =>
+                                for (int o = 0; o < humidityRanges.Length; o++)
                                 {
-                                    var locationNumberRanges = Convert(humidityRanges[0], _humidityToLocation).Distinct().ToArray();
+                                    Debug.WriteLine($"i:{i,2} j:{j,2} k:{k,2} l:{l,2} m:{m,2} n:{n,2} o:{o,2}");
+                                    var locationNumberRanges = Convert(humidityRanges[o], _humidityToLocation, true).Distinct().ToArray();
 
                                     var lowestLocationNumberInRange = locationNumberRanges.Min(lnr => lnr.Item1);
 
-                                    Debug.WriteLine($"Paths completed: {++pathsCompleted, 10} - i: {i, 3} - j: {j, 3} - k: {k, 3} - l: {l, 3} - m: {m, 3} - n: {n, 3} - o: {o, 3} - lowestLocationNumberInRange: {lowestLocationNumberInRange, 10}");
+                                    Debug.WriteLine($"Paths completed: {++pathsCompleted,10}");
                                     lock (lockObj)
                                         if (lowestLocationNumberInRange < lowestLocationNumber)
                                         {
-                                            Console.WriteLine($"New low: {lowestLocationNumberInRange, 10}");
                                             lowestLocationRange = locationNumberRanges.OrderBy(lnr => lnr.Item1).First();
+                                            Debug.WriteLine($"New low: {lowestLocationNumberInRange,10} of range to {lowestLocationRange.Item2,10}");
                                             lowestLocationNumber = lowestLocationNumberInRange;
                                         }
                                 }
-                                );
+                                // );
                             }
-                            );
+                            // );
                         }
-                        );
+                        // );
                     }
-                    );
+                    // );
                 }
-                );
+                // );
             }
-            );
+            // );
         }
-        );
+        // );
+
+        Console.WriteLine($"Lowest location range: {lowestLocationRange.Item1,10} - {lowestLocationRange.Item2,10}");
+
+        for (long i = lowestLocationRange.Item1; i <= lowestLocationRange.Item2; i++)
+        {
+            if (i % 1000000 == 0)
+                Console.WriteLine($"Checking {i,10}");
+
+            var humidity = Convert(i, _humidityToLocation, reverse: true);
+            var temp = Convert(humidity, _temperatureToHumidity, reverse: true);
+            var light = Convert(temp, _lightToTemperature, reverse: true);
+            var water = Convert(light, _waterToLight, reverse: true);
+            var fertilizer = Convert(water, _fertilizerToWater, reverse: true);
+            var soil = Convert(fertilizer, _soilToFertilizer, reverse: true);
+
+            var seed = Convert(soil, _seedToSoil, reverse: true);
+
+            // does seed land in any of the seed ranges?
+            foreach (var seedRange in _seedRanges)
+                if (seed >= seedRange.Item1 && seed <= seedRange.Item2)
+                {
+                    Debug.WriteLine(@$"
+                    seedRangeStart: {seedRange.Item1,10}
+                    seed:           {seed,10}
+                    seedRangeEnd:   {seedRange.Item2,10}
+                    from location:  {i,10}
+                    ");
+
+                    return i;
+
+                    // lock (lockObj)
+                    // is it lower?
+                    // if (i < lowestLocationNumber)
+                    //     lowestLocationNumber = i;
+                }
+        }
 
         return lowestLocationNumber;
     }
@@ -381,7 +434,7 @@ public static class Day5
                         lowestLocationNumber = i;
                 }
         }
-        
+
         return lowestLocationNumber;
     }
 
@@ -496,14 +549,22 @@ public static class Day5
         return seedRanges;
     }
 
-    private static IEnumerable<Tuple<long, long>> Convert(Tuple<long, long> inputRange, Mapping[] map)
+    private static IEnumerable<Tuple<long, long>> Convert(Tuple<long, long> inputRange, Mapping[] map, bool showConversions = false)
     {
+        Tuple<long, long>[] leftovers = [];
+        Tuple<long, long>[] converted = [];
 
         // if input range is fully outside all mappings, return input range
         if (!map.Any(m =>
             inputRange.Item1 >= m.SourceStart && inputRange.Item1 <= m.SourceEnd
             || inputRange.Item2 >= m.SourceStart && inputRange.Item2 <= m.SourceEnd))
         {
+            if (showConversions)
+            {
+                Debug.WriteLine($"Input range is fully outside all mappings: {inputRange.Item1} - {inputRange.Item2}");
+                Debug.WriteLine($"Leftovers: {inputRange.Item1} - {inputRange.Item2}");
+            }
+
             return [inputRange];
             // yield break;
         }
@@ -513,11 +574,9 @@ public static class Day5
         var inputStart = inputRange.Item1;
         var inputEnd = inputRange.Item2;
 
-        Tuple<long, long>[] leftovers = [];
-        Tuple<long, long>[] converted = [];
-
-        foreach (var mapping in map)
+        for (int i = 0; i < map.Length; i++)
         {
+            var mapping = map[i];
             var srcStart = mapping.SourceStart;
             var destStart = mapping.DestinationStart;
             var rngLength = mapping.RangeLength;
@@ -528,7 +587,10 @@ public static class Day5
             var offset = mapping.Offset;
             var advance = inputStart - srcStart;
 
-            Debug.WriteLine(@$"
+            if (showConversions)
+            {
+                Debug.WriteLine(@$"
+                    mapping:    {i,10}
                     inputStart: {inputStart,10}
                     inputEnd:   {inputEnd,10}
                     srcStart:   {srcStart,10}
@@ -539,11 +601,12 @@ public static class Day5
                     offset:     {offset,10}
                     advance:    {advance,10}
                     ");
+            }
 
             // overlapping none (1 range, itself)
             if (inputStart > srcEnd || inputEnd < srcStart)
             {
-                Debug.WriteLine($"No overlap: {inputStart} > {srcEnd} || {inputEnd} < {srcStart}");
+                if (showConversions) Debug.WriteLine($"No overlap: {inputStart} > {srcEnd} || {inputEnd} < {srcStart}");
                 // leftovers = [.. leftovers, inputRange];
                 continue;
                 // yield return new Tuple<long, long>(inputStart, inputEnd);
@@ -552,7 +615,7 @@ public static class Day5
             // overlapping start (2 ranges, one before and one after srcStart), 
             else if (inputStart < srcStart && inputEnd >= srcStart && inputEnd <= srcEnd)
             {
-                Debug.WriteLine($"Overlap start: {inputStart} < {srcStart} && {inputEnd} >= {srcStart} && {inputEnd} <= {srcEnd}");
+                if (showConversions) Debug.WriteLine($"Overlap start: {inputStart} < {srcStart} && {inputEnd} >= {srcStart} && {inputEnd} <= {srcEnd}");
                 // return inputStart-srcStart and srcStart-inputEnd
 
                 leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
@@ -564,7 +627,7 @@ public static class Day5
             //      and one in between srcStart and srcEnd that is mapped (destStart-destEnd)), 
             else if (inputStart < srcStart && inputEnd > srcEnd)
             {
-                Debug.WriteLine($"Overlap start + end: {inputStart} < {srcStart} && {inputEnd} > {srcEnd}");
+                if (showConversions) Debug.WriteLine($"Overlap start + end: {inputStart} < {srcStart} && {inputEnd} > {srcEnd}");
                 // return inputStart-srcStart, destStart-destEnd, and srcEnd-inputEnd
                 leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
                 converted = [.. converted, new Tuple<long, long>(destStart, destEnd)];
@@ -575,7 +638,7 @@ public static class Day5
             // overlapping end (2 ranges),
             else if (inputStart >= srcStart && inputStart <= srcEnd && inputEnd > srcEnd)
             {
-                Debug.WriteLine($"Overlap end: {inputStart} >= {srcStart} && {inputStart} <= {srcEnd} && {inputEnd} > {srcEnd}");
+                if (showConversions) Debug.WriteLine($"Overlap end: {inputStart} >= {srcStart} && {inputStart} <= {srcEnd} && {inputEnd} > {srcEnd}");
                 // return [destination-mapped-inputStart]-destEnd and destEnd-inputEnd
                 leftovers = [.. leftovers, new Tuple<long, long>(srcEnd + 1, inputEnd)];
                 converted = [.. converted, new Tuple<long, long>(destStart + (inputStart - srcStart), destEnd)];
@@ -585,7 +648,7 @@ public static class Day5
             // if input is in the source range
             else if (inputStart >= srcStart && inputEnd <= srcEnd)
             {
-                Debug.WriteLine($"Input is in source range: {inputStart} >= {srcStart} && {inputEnd} <= {srcEnd}");
+                if (showConversions) Debug.WriteLine($"Input is in source range: {inputStart} >= {srcStart} && {inputEnd} <= {srcEnd}");
                 // return the destination range start corresponding to the input range start
                 // + the difference between the input and the source start
                 converted = [.. converted, new Tuple<long, long>(destStart + advance, destStart + (inputEnd - srcStart))];
@@ -594,12 +657,16 @@ public static class Day5
             else
                 throw new NotImplementedException("Unexpected situation");
         }
-        return leftovers.Concat(converted).AsEnumerable();
-    }
 
-    private static IEnumerable<Tuple<long, long>> ConvertReverse(Tuple<long, long> destRange, Tuple<long, long, long>[] map)
-    {
-        throw new NotImplementedException();
+        if (showConversions)
+        {
+            Debug.WriteLine($"Converted: {string.Join(", ", converted.Select(l => $"{l.Item1}-{l.Item2}"))}");
+            Debug.WriteLine($"Leftovers: {string.Join(", ", leftovers.Select(l => $"{l.Item1}-{l.Item2}"))}");
+        }
+
+        var leftoversConverted = leftovers.SelectMany(l => Convert(l, map, showConversions: showConversions)).ToArray();
+
+        return leftoversConverted.Concat(converted).AsEnumerable();
     }
 }
 
