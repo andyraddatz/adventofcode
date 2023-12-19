@@ -1,6 +1,5 @@
 
 using System.Diagnostics;
-using System.Reflection.PortableExecutable;
 
 namespace AoCcsharp
 {
