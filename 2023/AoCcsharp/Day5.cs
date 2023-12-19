@@ -1,15 +1,10 @@
 using System.Data;
 using System.Diagnostics;
-using System.Text;
-using System.Linq;
-using Microsoft.VisualBasic;
 
 namespace AoCcsharp;
 
 public static class Day5
 {
-    // private static bool _showConversions = false;
-
     static readonly string[] _input = File.ReadAllLines("data/day5.txt");
     static readonly long[] _seeds;
     static Tuple<long, long>[] _seedRanges;
@@ -80,7 +75,6 @@ public static class Day5
         _temperatureToHumidity.VerifyNoOverlaps();
         _humidityToLocation.VerifyNoOverlaps();
     }
-
     internal static void VerifyNoOverlaps(this Mapping[] map)
     {
         if (map.Any(m => map.Any(m2 =>
@@ -96,12 +90,29 @@ public static class Day5
             throw new Exception("Overlapping mappings");
         }
     }
-
     private static Mapping GetMappingForIndex(int i) => new(new(
                     long.Parse(_input[i].Split(' ')[0]),
                     long.Parse(_input[i].Split(' ')[1]),
                     long.Parse(_input[i].Split(' ')[2])));
+    private static Tuple<long, long>[] GetSeedRangesInclusive(long[] seeds)
+    {
+        Tuple<long, long>[] seedRanges = [];
+        var seedRangeStart = 0L;
+        for (int i = 0; i < seeds.Length; i++)
+        {
+            // all even seeds are the start of a range
+            if (i % 2 == 0)
+                seedRangeStart = seeds[i];
+            else
+                seedRanges =
+                [
+                    .. seedRanges,
+                    new Tuple<long, long>(seedRangeStart, seedRangeStart + seeds[i] - 1)
+                ];
+        }
 
+        return seedRanges;
+    }
     public static long Part1()
     {
         long lowestLocationNumber = long.MaxValue;
@@ -198,6 +209,125 @@ public static class Day5
         // if no mapping return same input
         return input;
     }
+    private static IEnumerable<Tuple<long, long>> Convert(Tuple<long, long> inputRange, Mapping[] map, bool showConversions = false)
+    {
+        Tuple<long, long>[] leftovers = [];
+        Tuple<long, long>[] converted = [];
+
+        // if input range is fully outside all mappings, return input range
+        if (!map.Any(m =>
+            inputRange.Item1 >= m.SourceStart && inputRange.Item1 <= m.SourceEnd
+            || inputRange.Item2 >= m.SourceStart && inputRange.Item2 <= m.SourceEnd))
+        {
+            if (showConversions)
+            {
+                Debug.WriteLine($"Input range is fully outside all mappings: {inputRange.Item1} - {inputRange.Item2}");
+                Debug.WriteLine($"Leftovers: {inputRange.Item1} - {inputRange.Item2}");
+            }
+
+            return [inputRange];
+            // yield break;
+        }
+        // for each mapping, find the resulting output ranges based on the input range
+        // these may not be contiguous since the input range may span across values 
+        // inside and outside of the source range of the mapping
+        var inputStart = inputRange.Item1;
+        var inputEnd = inputRange.Item2;
+
+        for (int i = 0; i < map.Length; i++)
+        {
+            var mapping = map[i];
+            var srcStart = mapping.SourceStart;
+            var destStart = mapping.DestinationStart;
+            var rngLength = mapping.RangeLength;
+
+            var srcEnd = mapping.SourceEnd;
+            var destEnd = mapping.DestinationEnd;
+
+            var offset = mapping.Offset;
+            var advance = inputStart - srcStart;
+
+            if (showConversions)
+            {
+                Debug.WriteLine(@$"
+                    mapping:    {i,10}
+                    inputStart: {inputStart,10}
+                    inputEnd:   {inputEnd,10}
+                    srcStart:   {srcStart,10}
+                    srcEnd:     {srcEnd,10}
+                    rngLength:  {rngLength,10}
+                    destStart:  {destStart,10}
+                    destEnd:    {destEnd,10}
+                    offset:     {offset,10}
+                    advance:    {advance,10}
+                    ");
+            }
+
+            // overlapping none (1 range, itself)
+            if (inputStart > srcEnd || inputEnd < srcStart)
+            {
+                if (showConversions) Debug.WriteLine($"No overlap: {inputStart} > {srcEnd} || {inputEnd} < {srcStart}");
+                // leftovers = [.. leftovers, inputRange];
+                continue;
+                // yield return new Tuple<long, long>(inputStart, inputEnd);
+            }
+
+            // overlapping start (2 ranges, one before and one after srcStart), 
+            else if (inputStart < srcStart && inputEnd >= srcStart && inputEnd <= srcEnd)
+            {
+                if (showConversions) Debug.WriteLine($"Overlap start: {inputStart} < {srcStart} && {inputEnd} >= {srcStart} && {inputEnd} <= {srcEnd}");
+                // return inputStart-srcStart and srcStart-inputEnd
+
+                leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
+                converted = [.. converted, new Tuple<long, long>(destStart, destStart + (inputEnd - srcStart))];
+                // yield return new Tuple<long, long>(inputStart, srcStart - 1);
+                // yield return new Tuple<long, long>(destStart, inputEnd + offset); // ??? wrong?
+            }
+            // overlapping start + end (3 ranges, one before, one after, 
+            //      and one in between srcStart and srcEnd that is mapped (destStart-destEnd)), 
+            else if (inputStart < srcStart && inputEnd > srcEnd)
+            {
+                if (showConversions) Debug.WriteLine($"Overlap start + end: {inputStart} < {srcStart} && {inputEnd} > {srcEnd}");
+                // return inputStart-srcStart, destStart-destEnd, and srcEnd-inputEnd
+                leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
+                converted = [.. converted, new Tuple<long, long>(destStart, destEnd)];
+                // yield return new Tuple<long, long>(inputStart, srcStart - 1);
+                // yield return new Tuple<long, long>(destStart, destEnd);
+                // yield return new Tuple<long, long>(srcEnd + 1, inputEnd);
+            }
+            // overlapping end (2 ranges),
+            else if (inputStart >= srcStart && inputStart <= srcEnd && inputEnd > srcEnd)
+            {
+                if (showConversions) Debug.WriteLine($"Overlap end: {inputStart} >= {srcStart} && {inputStart} <= {srcEnd} && {inputEnd} > {srcEnd}");
+                // return [destination-mapped-inputStart]-destEnd and destEnd-inputEnd
+                leftovers = [.. leftovers, new Tuple<long, long>(srcEnd + 1, inputEnd)];
+                converted = [.. converted, new Tuple<long, long>(destStart + (inputStart - srcStart), destEnd)];
+                // yield return new Tuple<long, long>(destStart + (inputStart - srcStart), destEnd);
+                // yield return new Tuple<long, long>(srcEnd + 1, inputEnd);
+            }
+            // if input is in the source range
+            else if (inputStart >= srcStart && inputEnd <= srcEnd)
+            {
+                if (showConversions) Debug.WriteLine($"Input is in source range: {inputStart} >= {srcStart} && {inputEnd} <= {srcEnd}");
+                // return the destination range start corresponding to the input range start
+                // + the difference between the input and the source start
+                converted = [.. converted, new Tuple<long, long>(destStart + advance, destStart + (inputEnd - srcStart))];
+                // yield return new Tuple<long, long>(destStart + advance, destStart + (inputEnd - srcStart));
+            }
+            else
+                throw new NotImplementedException("Unexpected situation");
+        }
+
+        if (showConversions)
+        {
+            Debug.WriteLine($"Converted: {string.Join(", ", converted.Select(l => $"{l.Item1}-{l.Item2}"))}");
+            Debug.WriteLine($"Leftovers: {string.Join(", ", leftovers.Select(l => $"{l.Item1}-{l.Item2}"))}");
+        }
+
+        var leftoversConverted = leftovers.SelectMany(l => Convert(l, map, showConversions: showConversions)).ToArray();
+
+        return leftoversConverted.Concat(converted).AsEnumerable();
+    }
     public static long Part2Attempt3()
     {
         // TODO: recursion
@@ -211,7 +341,6 @@ public static class Day5
         {
             Debug.WriteLine($"i:{i,2}");
             var soilRanges = Convert(_seedRanges[i], _seedToSoil, true).Distinct().ToArray();
-            // Debug.WriteLine($"i:{i,2}{Environment.NewLine}{string.Join(Environment.NewLine, soilRanges.Select(sr => $"{sr.Item1,10} - {sr.Item2,10}"))}");
             // Parallel.For(0, soilRanges.Length, j =>
             for (int j = 0; j < soilRanges.Length; j++)
             {
@@ -269,12 +398,12 @@ public static class Day5
         }
         // );
 
-        Console.WriteLine($"Lowest location range: {lowestLocationRange.Item1,10} - {lowestLocationRange.Item2,10}");
+        Debug.WriteLine($"Lowest location range: {lowestLocationRange.Item1,10} - {lowestLocationRange.Item2,10}");
 
         for (long i = lowestLocationRange.Item1; i <= lowestLocationRange.Item2; i++)
         {
             if (i % 1000000 == 0)
-                Console.WriteLine($"Checking {i,10}");
+                Debug.WriteLine($"Checking {i,10}");
 
             var humidity = Convert(i, _humidityToLocation, reverse: true);
             var temp = Convert(humidity, _temperatureToHumidity, reverse: true);
@@ -307,6 +436,7 @@ public static class Day5
 
         return lowestLocationNumber;
     }
+    #region TrialErrorAndDebugging
     private static void SetExampleValues()
     {
 
@@ -437,7 +567,6 @@ public static class Day5
 
         return lowestLocationNumber;
     }
-
     public static long Part2Attempt2()
     {
         // can I use this to somehow map each layer of translation to smallest possible space?
@@ -491,9 +620,9 @@ public static class Day5
 
         return 0;
     }
-
     public static long Part2()
     {
+        // Attempt 1
         Tuple<long, long>[] seedRanges = GetSeedRangesInclusive(_seeds);
 
         long lowestLocationNumber = long.MaxValue;
@@ -528,146 +657,7 @@ public static class Day5
 
         return lowestLocationNumber;
     }
-
-    private static Tuple<long, long>[] GetSeedRangesInclusive(long[] seeds)
-    {
-        Tuple<long, long>[] seedRanges = [];
-        var seedRangeStart = 0L;
-        for (int i = 0; i < seeds.Length; i++)
-        {
-            // all even seeds are the start of a range
-            if (i % 2 == 0)
-                seedRangeStart = seeds[i];
-            else
-                seedRanges =
-                [
-                    .. seedRanges,
-                    new Tuple<long, long>(seedRangeStart, seedRangeStart + seeds[i] - 1)
-                ];
-        }
-
-        return seedRanges;
-    }
-
-    private static IEnumerable<Tuple<long, long>> Convert(Tuple<long, long> inputRange, Mapping[] map, bool showConversions = false)
-    {
-        Tuple<long, long>[] leftovers = [];
-        Tuple<long, long>[] converted = [];
-
-        // if input range is fully outside all mappings, return input range
-        if (!map.Any(m =>
-            inputRange.Item1 >= m.SourceStart && inputRange.Item1 <= m.SourceEnd
-            || inputRange.Item2 >= m.SourceStart && inputRange.Item2 <= m.SourceEnd))
-        {
-            if (showConversions)
-            {
-                Debug.WriteLine($"Input range is fully outside all mappings: {inputRange.Item1} - {inputRange.Item2}");
-                Debug.WriteLine($"Leftovers: {inputRange.Item1} - {inputRange.Item2}");
-            }
-
-            return [inputRange];
-            // yield break;
-        }
-        // for each mapping, find the resulting output ranges based on the input range
-        // these may not be contiguous since the input range may span across values 
-        // inside and outside of the source range of the mapping
-        var inputStart = inputRange.Item1;
-        var inputEnd = inputRange.Item2;
-
-        for (int i = 0; i < map.Length; i++)
-        {
-            var mapping = map[i];
-            var srcStart = mapping.SourceStart;
-            var destStart = mapping.DestinationStart;
-            var rngLength = mapping.RangeLength;
-
-            var srcEnd = mapping.SourceEnd;
-            var destEnd = mapping.DestinationEnd;
-
-            var offset = mapping.Offset;
-            var advance = inputStart - srcStart;
-
-            if (showConversions)
-            {
-                Debug.WriteLine(@$"
-                    mapping:    {i,10}
-                    inputStart: {inputStart,10}
-                    inputEnd:   {inputEnd,10}
-                    srcStart:   {srcStart,10}
-                    srcEnd:     {srcEnd,10}
-                    rngLength:  {rngLength,10}
-                    destStart:  {destStart,10}
-                    destEnd:    {destEnd,10}
-                    offset:     {offset,10}
-                    advance:    {advance,10}
-                    ");
-            }
-
-            // overlapping none (1 range, itself)
-            if (inputStart > srcEnd || inputEnd < srcStart)
-            {
-                if (showConversions) Debug.WriteLine($"No overlap: {inputStart} > {srcEnd} || {inputEnd} < {srcStart}");
-                // leftovers = [.. leftovers, inputRange];
-                continue;
-                // yield return new Tuple<long, long>(inputStart, inputEnd);
-            }
-
-            // overlapping start (2 ranges, one before and one after srcStart), 
-            else if (inputStart < srcStart && inputEnd >= srcStart && inputEnd <= srcEnd)
-            {
-                if (showConversions) Debug.WriteLine($"Overlap start: {inputStart} < {srcStart} && {inputEnd} >= {srcStart} && {inputEnd} <= {srcEnd}");
-                // return inputStart-srcStart and srcStart-inputEnd
-
-                leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
-                converted = [.. converted, new Tuple<long, long>(destStart, destStart + (inputEnd - srcStart))];
-                // yield return new Tuple<long, long>(inputStart, srcStart - 1);
-                // yield return new Tuple<long, long>(destStart, inputEnd + offset); // ??? wrong?
-            }
-            // overlapping start + end (3 ranges, one before, one after, 
-            //      and one in between srcStart and srcEnd that is mapped (destStart-destEnd)), 
-            else if (inputStart < srcStart && inputEnd > srcEnd)
-            {
-                if (showConversions) Debug.WriteLine($"Overlap start + end: {inputStart} < {srcStart} && {inputEnd} > {srcEnd}");
-                // return inputStart-srcStart, destStart-destEnd, and srcEnd-inputEnd
-                leftovers = [.. leftovers, new Tuple<long, long>(inputStart, srcStart - 1)];
-                converted = [.. converted, new Tuple<long, long>(destStart, destEnd)];
-                // yield return new Tuple<long, long>(inputStart, srcStart - 1);
-                // yield return new Tuple<long, long>(destStart, destEnd);
-                // yield return new Tuple<long, long>(srcEnd + 1, inputEnd);
-            }
-            // overlapping end (2 ranges),
-            else if (inputStart >= srcStart && inputStart <= srcEnd && inputEnd > srcEnd)
-            {
-                if (showConversions) Debug.WriteLine($"Overlap end: {inputStart} >= {srcStart} && {inputStart} <= {srcEnd} && {inputEnd} > {srcEnd}");
-                // return [destination-mapped-inputStart]-destEnd and destEnd-inputEnd
-                leftovers = [.. leftovers, new Tuple<long, long>(srcEnd + 1, inputEnd)];
-                converted = [.. converted, new Tuple<long, long>(destStart + (inputStart - srcStart), destEnd)];
-                // yield return new Tuple<long, long>(destStart + (inputStart - srcStart), destEnd);
-                // yield return new Tuple<long, long>(srcEnd + 1, inputEnd);
-            }
-            // if input is in the source range
-            else if (inputStart >= srcStart && inputEnd <= srcEnd)
-            {
-                if (showConversions) Debug.WriteLine($"Input is in source range: {inputStart} >= {srcStart} && {inputEnd} <= {srcEnd}");
-                // return the destination range start corresponding to the input range start
-                // + the difference between the input and the source start
-                converted = [.. converted, new Tuple<long, long>(destStart + advance, destStart + (inputEnd - srcStart))];
-                // yield return new Tuple<long, long>(destStart + advance, destStart + (inputEnd - srcStart));
-            }
-            else
-                throw new NotImplementedException("Unexpected situation");
-        }
-
-        if (showConversions)
-        {
-            Debug.WriteLine($"Converted: {string.Join(", ", converted.Select(l => $"{l.Item1}-{l.Item2}"))}");
-            Debug.WriteLine($"Leftovers: {string.Join(", ", leftovers.Select(l => $"{l.Item1}-{l.Item2}"))}");
-        }
-
-        var leftoversConverted = leftovers.SelectMany(l => Convert(l, map, showConversions: showConversions)).ToArray();
-
-        return leftoversConverted.Concat(converted).AsEnumerable();
-    }
+    #endregion
 }
 
 internal class Mapping(Tuple<long, long, long> mapping)
