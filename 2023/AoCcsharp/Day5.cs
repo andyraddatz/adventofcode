@@ -605,10 +605,10 @@ public static class Day5
 
 internal class Mapping(Tuple<long, long, long> mapping)
 {
-    public long SourceStart { get; } = mapping.Item1;
-    public long SourceEnd { get; } = mapping.Item1 + mapping.Item3 - 1;
-    public long DestinationStart { get; } = mapping.Item2;
-    public long DestinationEnd { get; } = mapping.Item2 + mapping.Item3 - 1;
+    public long SourceStart { get; } = mapping.Item2;
+    public long SourceEnd { get; } = mapping.Item2 + mapping.Item3 - 1;
+    public long DestinationStart { get; } = mapping.Item1;
+    public long DestinationEnd { get; } = mapping.Item1 + mapping.Item3 - 1;
     public long RangeLength { get; } = mapping.Item3;
-    public long Offset { get; } = mapping.Item2 - mapping.Item1;
+    public long Offset { get; } = mapping.Item1 - mapping.Item2;
 }
